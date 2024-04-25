@@ -28,6 +28,41 @@ Note:
 
 """
 
+
+"""
+Description: You can customize the developed langchain tool overview information here,
+just like the sample code already given in this script.
+"""
+
+
+tool_param_start_with = "```python\ntool_call"
+
+
+""" Fill this dictionary with the mapping from tool class names to tool classes that you defined.  
+Like: 
+         from tools.Calculator import Calculator
+         tool_class = {"Calculator": Calculator, ...}
+
+It is required that your customized tool class must define the format for the langchain tool 
+and implement the parameter verification function in the class:
+       parameter_validation(self, para: str) -> bool
+       
+Tool class definition reference: ChatGLM3/langchain_demo/tools.
+"""
+tool_class = {}
+
+
+""" Describe your tool names and parameters in this dictionary.
+Like:
+  tool_def = [
+    {"name": "Calculator", 
+     "description": "数学计算器，计算数学问题", 
+      "parameters": {"type": "object", "properties": {"symbol": {"description": "要计算的数学公式"}}, "required": []}
+     },...
+  ]
+"""
+tool_def = []
+
 import os
 import time
 import tiktoken
@@ -41,22 +76,13 @@ from contextlib import asynccontextmanager
 from typing import List, Literal, Optional, Union
 from loguru import logger
 from pydantic import BaseModel, Field
-from transformers import AutoTokenizer, AutoModel
+from modelscope import AutoTokenizer, AutoModel
 from utils import process_response, generate_chatglm3, generate_stream_chatglm3
 from sentence_transformers import SentenceTransformer
-from tools.schema import tool_class, tool_def, tool_param_start_with
 from sse_starlette.sse import EventSourceResponse
 
 # Set up limit request time
 EventSourceResponse.DEFAULT_PING_INTERVAL = 1000
-
-# set LLM path
-MODEL_PATH = os.environ.get('MODEL_PATH', 'THUDM/chatglm3-6b')
-TOKENIZER_PATH = os.environ.get("TOKENIZER_PATH", MODEL_PATH)
-
-# set Embedding Model path
-EMBEDDING_PATH = os.environ.get('EMBEDDING_PATH', 'BAAI/bge-m3')
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -536,13 +562,14 @@ def contains_custom_function(value: str, tools: list) -> bool:
     for tool in tools:
         if value and tool["name"] in value:
             return True
-
+        
+from sentence_transformers import SentenceTransformer
+from modelscope import snapshot_download
+model_dir = snapshot_download('Jerry0/m3e-base')
 
 if __name__ == "__main__":
     # Load LLM
-    tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_PATH, trust_remote_code=True)
-    model = AutoModel.from_pretrained(MODEL_PATH, trust_remote_code=True, device_map="auto").eval()
-
-    # load Embedding
-    embedding_model = SentenceTransformer(EMBEDDING_PATH, device="cuda")
+    tokenizer = AutoTokenizer.from_pretrained("ZhipuAI/chatglm3-6b", trust_remote_code=True)
+    model = AutoModel.from_pretrained("ZhipuAI/chatglm3-6b", trust_remote_code=True, device_map="auto").quantize(4).eval()
+    embedding_model = SentenceTransformer(model_dir)
     uvicorn.run(app, host='0.0.0.0', port=8000, workers=1)
