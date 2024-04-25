@@ -565,11 +565,11 @@ def contains_custom_function(value: str, tools: list) -> bool:
         
 from sentence_transformers import SentenceTransformer
 from modelscope import snapshot_download
-model_dir = snapshot_download('Jerry0/m3e-base')
+model_dir = snapshot_download('iic/nlp_corom_sentence-embedding_chinese-base')
 
 if __name__ == "__main__":
     # Load LLM
     tokenizer = AutoTokenizer.from_pretrained("ZhipuAI/chatglm3-6b", trust_remote_code=True)
     model = AutoModel.from_pretrained("ZhipuAI/chatglm3-6b", trust_remote_code=True, device_map="auto").quantize(4).eval()
     embedding_model = SentenceTransformer(model_dir)
-    uvicorn.run(app, host='0.0.0.0', port=8000, workers=1)
+    uvicorn.run(app, host='127.0.0.1', port=8000, workers=1)
